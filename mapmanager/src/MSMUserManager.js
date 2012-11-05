@@ -549,16 +549,21 @@ UserManagerView = Ext.extend(
 												var nameField = Ext.getCmp("user-textfield");
 												var passwordField = Ext.getCmp("password-textfield");
 												var roleDropdown = Ext.getCmp("role-dropdown"); 
+												
+												var updateFields = { name: nameField.getValue() };
+												
+												if(passwordField.getValue() != '')
+													updateFields.password = passwordField.getValue();
+												
+												if(isAdmin)
+													updateFields.role = roleDropdown.getValue();
 
 												if ( nameField.isValid(false) &&
-													 passwordField.isValid(false) &&
-													 (isAdmin ? roleDropdown.isValid(false) : true)
+													 (updateFields.password ? passwordField.isValid(false) : true) &&
+													 (updateFields.role ? roleDropdown.isValid(false) : true)
 													)
 												{
-													userManager.users.update( useridField.getValue(),
-															{ name: nameField.getValue(), 
-															  password:passwordField.getValue(), 
-															  role:roleDropdown.getValue() }, 
+													userManager.users.update( useridField.getValue(), updateFields, 
 															  function(response) {
 																winEdit.hide();
 																formEdit.getForm().reset();

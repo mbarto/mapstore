@@ -592,15 +592,14 @@
 		initialize: function(){
 			this.resourceNamePrefix_ = 'user';
 		},
-		beforeSave: function(data){
+		beforeSave: function(data) {
 			// wrap new user within an xml envelop
-			var xml = '<User><name>' + data.name +'</name>'
-					  +'<newPassword>'+ data.password + '</newPassword>'
-					  +'<role>' + data.role + '</role></User>';
+			var xml = '<User><name>' + data.name +'</name>',
+				xml += data.password ? '<newPassword>'+ data.password + '</newPassword>' :'',
+				xml += data.role ? '<role>' + data.role + '</role>' : '',
+				xml += '</User>';
 			return xml;
 		},
-
-		//TODO beforeUpdate
 	
 		afterFind: function(json){
 			 if ( json.UserList ){
