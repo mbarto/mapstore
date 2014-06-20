@@ -13,6 +13,8 @@
 Ext.ns('gxp.data', 'gxp.plugins');
 
 gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
+    noLayerInProjectionError: "No layer in the current map projection is available on this server",
+    warningTitle: "Warning",
     constructor: function(meta, recordType) {
         meta = meta || {};
         if (!meta.format) {
@@ -83,7 +85,7 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
         return null;
     },
     readRecords: function(data) {
-        var records = [], i, ii, j, jj, url, proj, projStr, encoding;
+        var records = [], i, ii, j, jj, url, proj, projStr, encoding, wrongProjCount = 0;
         if (typeof data === "string" || data.nodeType) {
             data = this.meta.format.read(data);
             this.raw = data;
@@ -129,7 +131,10 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                                                     style: style,
                                                     matrixSet: layer.tileMatrixSetLinks[j].tileMatrixSet,
                                                     matrixIds: matrixIds,
-                                                    maxExtent: this.getMaxExtent(layer.bounds, this.meta.mapProjection)
+                                                    maxExtent: this.getMaxExtent(
+                                                        layer.bounds || new OpenLayers.Bounds(-180,-90,180,90), 
+                                                        this.meta.mapProjection
+                                                    )
                                                 };
                                             // prefer png if available
                                             for (var curFormat=0, formatCount=layer.formats.length; curFormat<formatCount; curFormat++) {
@@ -157,12 +162,23 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                                                 formats: layer.formats,
                                                 styles: layer.styles
                                             }));
-                                        }
-                                }
+                                        } else {
+                                        wrongProjCount++;
+                                    }
+                                } 
                         }
                     }
                 }
             }
+        }
+        if(records.length === 0 && wrongProjCount > 0) {
+            Ext.Msg.show({
+                  title: this.warningTitle,
+                  msg: this.noLayerInProjectionError,
+                  buttons: Ext.Msg.OK,
+                  width: 300,
+                  icon: Ext.MessageBox.WARNING
+            });
         }
         return {
             totalRecords: records.length,

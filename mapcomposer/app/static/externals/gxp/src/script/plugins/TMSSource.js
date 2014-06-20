@@ -13,6 +13,8 @@
 Ext.ns('gxp.data', 'gxp.plugins');
 
 gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
+    noLayerInProjectionError: "No layer in the current map projection is available on this server",
+    warningTitle: "Warning",
     constructor: function(meta, recordType) {
         meta = meta || {};
         if (!meta.format) {
@@ -36,8 +38,20 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
         }
         return this.readRecords(data);
     },
+    equivalentProj: function(proj1, proj2) {
+        // Necessary because OpenLayers.Projection.equals does not handle
+        // equivalent definitions, e.g. EPSG:900913 vs urn:ogc:def:crs:EPSG::900913
+        if (proj1.length < proj2.length) {
+            var projtmp = proj1;
+            proj1 = proj2;
+            proj2 = projtmp;
+        }
+        proj1 = proj1.replace(/::/g, ":");
+        proj2 = proj2.replace(/::/g, ":");
+        return (proj1.indexOf(proj2, proj1.length - proj2.length) !== -1);
+    },
     readRecords: function(data) {
-        var records = [], i, ii, url, proj;
+        var records = [], i, ii, url, proj, wrongProjCount = 0;
         if (typeof data === "string" || data.nodeType) {
             data = this.meta.format.read(data);
             this.raw = data;
@@ -45,7 +59,9 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
             if (!data.tileMaps) {
                 if (data.tileSets) {
                     proj = new OpenLayers.Projection(data.srs);
-                    if (this.meta.mapProjection.equals(proj)) {
+                    if (this.meta.mapProjection.equals(proj) ||
+                            // handle equivalent defintions, e.g. EPSG:900913 vs urn:ogc:def:crs:EPSG::900913
+                            this.equivalentProj(data.srs, this.meta.mapProjection.projCode)) {
                         var serverResolutions = [];
                         for (i=0, ii=data.tileSets.length; i<ii; ++i) {
                             serverResolutions.push(data.tileSets[i].unitsPerPixel);
@@ -67,13 +83,17 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                             name: data.title,
                             tileMapUrl: this.meta.baseUrl
                         }));
+                    } else {
+                        wrongProjCount++;
                     }
                 }
             } else {
                 for (i=0, ii=data.tileMaps.length; i<ii; ++i) {
                     var tileMap = data.tileMaps[i];
                     proj = new OpenLayers.Projection(tileMap.srs);
-                    if (this.meta.mapProjection.equals(proj)) {
+                    if (this.meta.mapProjection.equals(proj) ||
+                            // handle equivalent defintions, e.g. EPSG:900913 vs urn:ogc:def:crs:EPSG::900913
+                            this.equivalentProj(tileMap.srs, this.meta.mapProjection.projCode)) {
                         url = tileMap.href;
                         var layername = url.substring(url.indexOf(this.meta.version + '/') + 6);
                         records.push(new this.recordType({
@@ -87,9 +107,20 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                             name: tileMap.title,
                             tileMapUrl: url
                         }));
+                    } else {
+                        wrongProjCount++;
                     }
                 }
             }
+        }
+        if(records.length === 0 && wrongProjCount > 0) {
+            Ext.Msg.show({
+                  title: this.warningTitle,
+                  msg: this.noLayerInProjectionError,
+                  buttons: Ext.Msg.OK,
+                  width: 300,
+                  icon: Ext.MessageBox.WARNING
+            });
         }
         return {
             totalRecords: records.length,
