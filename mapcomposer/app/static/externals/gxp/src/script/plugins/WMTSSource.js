@@ -15,6 +15,9 @@ Ext.ns('gxp.data', 'gxp.plugins');
 gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
     noLayerInProjectionError: "No layer in the current map projection is available on this server",
     warningTitle: "Warning",
+    
+    preferredEncoding: "REST",
+    
     constructor: function(meta, recordType) {
         meta = meta || {};
         if (!meta.format) {
@@ -64,32 +67,53 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
             }
             return maxExtent;
     },
-    getEncodingStyle: function(response) {
+    getEncodingStyles: function(response) {
         var operationsMetadata = response.operationsMetadata;
+        var encodingStyles = {};
         if (operationsMetadata.GetTile &&
                 operationsMetadata.GetTile.dcp &&
                 operationsMetadata.GetTile.dcp.http &&
-                operationsMetadata.GetTile.dcp.http.get &&
-                operationsMetadata.GetTile.dcp.http.get[0].constraints &&
-                operationsMetadata.GetTile.dcp.http.get[0].constraints.GetEncoding &&
-                operationsMetadata.GetTile.dcp.http.get[0].constraints.GetEncoding.allowedValues &&
-                operationsMetadata.GetTile.dcp.http.get[0].constraints.GetEncoding.allowedValues.KVP &&
-                operationsMetadata.GetTile.dcp.http.get[0].constraints.GetEncoding.allowedValues.KVP==true) {
-                    return "KVP";
+                operationsMetadata.GetTile.dcp.http.get) {
+                var getUrls = operationsMetadata.GetTile.dcp.http.get;
+                for(var i = 0, l = getUrls.length; i < l; i++) {
+                    var getUrl = getUrls[i];
+                    if(this.supportsEncoding(getUrl, 'KVP')) {
+                        encodingStyles['KVP'] = getUrl.url;
+                    }
+                    if(this.supportsEncoding(getUrl, 'RESTful')) {
+                        encodingStyles['REST'] = getUrl.url;
+                    }
+                }
         }
-        else if (response.serviceMetadataUrl 
+        /*else if (response.serviceMetadataUrl 
             && response.serviceMetadataUrl.href
             && response.serviceMetadataUrl.href.indexOf("?") === -1) {
             return "REST";
-        }
-        return null;
+        }*/
+        return encodingStyles;
+    },
+    supportsEncoding: function(getUrl, encoding) {
+        return getUrl.constraints && getUrl.constraints.GetEncoding && getUrl.constraints.GetEncoding.allowedValues 
+                        && getUrl.constraints.GetEncoding.allowedValues[encoding] === true
     },
     readRecords: function(data) {
         var records = [], i, ii, j, jj, url, proj, projStr, encoding, wrongProjCount = 0;
         if (typeof data === "string" || data.nodeType) {
             data = this.meta.format.read(data);
             this.raw = data;
-            encoding = this.getEncodingStyle(data);
+            var encodingStyles = this.getEncodingStyles(data);
+            if(encodingStyles[this.preferredEncoding]) {
+                encoding = this.preferredEncoding;
+                url = encodingStyles[this.preferredEncoding];
+            } else {
+                for(var enc in encodingStyles) {
+                    if(encodingStyles.hasOwnProperty(enc)) {
+                        encoding = enc;
+                        url = encodingStyles[enc];
+                    }
+                }
+            }
+            
             if (encoding!=null && data.contents) {
                 if (data.contents.layers && data.contents.tileMatrixSets) {
                     for (i=0, ii=data.contents.layers.length; i<ii; i++) { // loop on layers
@@ -123,18 +147,29 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                                                     style = layer.styles[0].identifier;
                                                 }
                                             }
+                                            var resolutions = [];
+                                            var units = (this.meta.mapProjection.projCode === "EPSG:4326" ? "degrees" : "m");
+                                            for (var res = 0, l = matrixIds.length; res < l; res++) {
+                                                resolutions.push(
+                                                    matrixIds[res].scaleDenominator * 0.28E-3 /
+                                                        OpenLayers.METERS_PER_INCH /
+                                                        OpenLayers.INCHES_PER_UNIT[units]);
+                                            }
+                                            
                                             var config = {
                                                     name: layer.title,
                                                     layer: layer.identifier,
                                                     requestEncoding: encoding,
-                                                    url: this.meta.baseUrl.split("?")[0],
+                                                    url: url || this.meta.baseUrl.split("?")[0],
                                                     style: style,
                                                     matrixSet: layer.tileMatrixSetLinks[j].tileMatrixSet,
                                                     matrixIds: matrixIds,
                                                     maxExtent: this.getMaxExtent(
                                                         layer.bounds || new OpenLayers.Bounds(-180,-90,180,90), 
                                                         this.meta.mapProjection
-                                                    )
+                                                    ),
+                                                    resolutions: resolutions,
+                                                    serverResolutions: resolutions
                                                 };
                                             // prefer png if available
                                             for (var curFormat=0, formatCount=layer.formats.length; curFormat<formatCount; curFormat++) {
@@ -148,9 +183,9 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                                                 layer.resourceUrl.tile.template) {
                                                 config.url = layer.resourceUrl.tile.template;
                                             }
-                                            else {
+                                            /*else {
                                                 config.url = this.meta.baseUrl.split("?")[0];
-                                            }
+                                            }*/
                                             records.push(new this.recordType({
                                                 layer: new OpenLayers.Layer.WMTS(config),
                                                 title: layer.title,
