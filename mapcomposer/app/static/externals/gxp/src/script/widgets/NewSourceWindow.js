@@ -71,6 +71,12 @@ gxp.NewSourceWindow = Ext.extend(Ext.Window, {
      * The error message set (for example, when adding the source failed)
      */
     error: null,
+    
+    /** api: config[availableSources]
+     *  ``Array``
+     *  List of available sources, with related configuration.
+     */
+    availableSources: [],
 
     /** api: event[server-added]
      * Fired with the URL that the user provided as a parameter when the form 
@@ -88,6 +94,12 @@ gxp.NewSourceWindow = Ext.extend(Ext.Window, {
             validator: this.urlValidator.createDelegate(this)
         });
         
+        var store = [];
+        for(var count = 0, l = this.availableSources.length; count < l; count++) {
+            var source = this.availableSources[count];
+            store.push([source.name, source.description]);
+        }
+        
         this.form = new Ext.form.FormPanel({
             items: [{
                 xtype: 'combo',
@@ -97,11 +109,7 @@ gxp.NewSourceWindow = Ext.extend(Ext.Window, {
                 value: 'WMS',
                 mode: 'local',
                 triggerAction: 'all',
-                store: [
-                    ['WMS', 'Web Map Service (WMS)'], 
-                    ['WMTS', 'Web Map Tile Service (WMTS)'], 
-                    ['TMS', 'Tiled Map Service (TMS)'] 
-                ]
+                store: store
             }, this.urlTextField],
             border: false,
             labelWidth: 30,

@@ -46,8 +46,9 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
             proj1 = proj2;
             proj2 = projtmp;
         }
-        proj1 = proj1.replace(/::/g, ":");
-        proj2 = proj2.replace(/::/g, ":");
+        
+        proj1 = proj1.replace(/::/g, ":").replace(/CRS84/g, "EPSG:4326").replace(/OSGEO:41001/g, "EPSG:900913");
+        proj2 = proj2.replace(/::/g, ":").replace(/CRS84/g, "EPSG:4326").replace(/OSGEO:41001/g, "EPSG:900913");
         return (proj1.indexOf(proj2, proj1.length - proj2.length) !== -1);
     },
     readRecords: function(data) {
@@ -67,13 +68,17 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                             serverResolutions.push(data.tileSets[i].unitsPerPixel);
                         }
                         url = this.meta.baseUrl;
+                        if (url.slice(-1) !== '/') {
+                            url = url + '/';
+                        }
                         var layerName = url.substring(
                             url.indexOf(this.meta.version) + this.meta.version.length + 1,
                             url.lastIndexOf('/'));
                         records.push(new this.recordType({
                             layer: new OpenLayers.Layer.TMS(
                                 data.title,
-                                data.tileMapService.replace("/" + this.meta.version, ""), {
+                                data.tileMapService ? data.tileMapService.replace("/" + this.meta.version, "") : url.replace("/" + this.meta.version + "/" + layerName , ""), 
+                                {
                                     serverResolutions: serverResolutions,
                                     type: data.tileFormat.extension,
                                     layername: layerName
@@ -81,7 +86,7 @@ gxp.data.TMSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                             ),
                             title: data.title,
                             name: data.title,
-                            tileMapUrl: this.meta.baseUrl
+                            tileMapUrl: url
                         }));
                     } else {
                         wrongProjCount++;
@@ -167,9 +172,6 @@ gxp.plugins.TMSSource = Ext.extend(gxp.plugins.LayerSource, {
     constructor: function(config) {
         gxp.plugins.TMSSource.superclass.constructor.apply(this, arguments);
         this.format = new OpenLayers.Format.TMSCapabilities();
-        if (this.url.slice(-1) !== '/') {
-            this.url = this.url + '/';
-        }
     },
 
     /** api: method[createStore]

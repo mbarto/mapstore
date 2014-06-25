@@ -16,12 +16,15 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
     noLayerInProjectionError: "No layer in the current map projection is available on this server",
     warningTitle: "Warning",
     
-    preferredEncoding: "REST",
+    preferredEncoding: "KVP",
     
     constructor: function(meta, recordType) {
         meta = meta || {};
         if (!meta.format) {
             meta.format = new OpenLayers.Format.WMTSCapabilities();
+        }
+        if(meta.preferredEncoding) {
+            this.preferredEncoding = meta.preferredEncoding;
         }
         if(typeof recordType !== "function") {
             recordType = GeoExt.data.LayerRecord.create(
@@ -53,8 +56,8 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
             proj1 = proj2;
             proj2 = projtmp;
         }
-        proj1 = proj1.replace(/::/g, ":");
-        proj2 = proj2.replace(/::/g, ":");
+        proj1 = proj1.replace(/::/g, ":").replace(/CRS84/g, "EPSG:4326").replace(/OSGEO:41001/g, "EPSG:900913");
+        proj2 = proj2.replace(/::/g, ":").replace(/CRS84/g, "EPSG:4326").replace(/OSGEO:41001/g, "EPSG:900913");
         return (proj1.indexOf(proj2, proj1.length - proj2.length) !== -1);
     },
     getMaxExtent: function(wgs84bounds, projection) {
@@ -85,16 +88,20 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                     }
                 }
         }
-        /*else if (response.serviceMetadataUrl 
-            && response.serviceMetadataUrl.href
-            && response.serviceMetadataUrl.href.indexOf("?") === -1) {
-            return "REST";
-        }*/
+        
         return encodingStyles;
     },
     supportsEncoding: function(getUrl, encoding) {
         return getUrl.constraints && getUrl.constraints.GetEncoding && getUrl.constraints.GetEncoding.allowedValues 
                         && getUrl.constraints.GetEncoding.allowedValues[encoding] === true
+    },
+    normalizeTemplate: function(template) {
+        var variables = ['TileMatrixSet', 'TileMatrix', 'TileRow', 'TileCol'];
+        for(var i = 0, l = variables.length; i < l; i++) {
+            var variable = variables[i];
+            template = template.replace(new RegExp("\{" + variable + "\}", 'ig'), "{" + variable + "}");
+        }
+        return template;
     },
     readRecords: function(data) {
         var records = [], i, ii, j, jj, url, proj, projStr, encoding, wrongProjCount = 0;
@@ -113,8 +120,10 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                     }
                 }
             }
-            
-            if (encoding!=null && data.contents) {
+            if(!encoding) {
+                encoding = this.preferredEncoding;
+            }
+            if (data.contents) {
                 if (data.contents.layers && data.contents.tileMatrixSets) {
                     for (i=0, ii=data.contents.layers.length; i<ii; i++) { // loop on layers
                         var layer=data.contents.layers[i];
@@ -181,11 +190,9 @@ gxp.data.WMTSCapabilitiesReader = Ext.extend(Ext.data.DataReader, {
                                                 layer.resourceUrl &&
                                                 layer.resourceUrl.tile &&
                                                 layer.resourceUrl.tile.template) {
-                                                config.url = layer.resourceUrl.tile.template;
+                                                config.url = this.normalizeTemplate(layer.resourceUrl.tile.template);
                                             }
-                                            /*else {
-                                                config.url = this.meta.baseUrl.split("?")[0];
-                                            }*/
+                                            
                                             records.push(new this.recordType({
                                                 layer: new OpenLayers.Layer.WMTS(config),
                                                 title: layer.title,
@@ -319,7 +326,8 @@ gxp.plugins.WMTSSource = Ext.extend(gxp.plugins.LayerSource, {
             reader: new gxp.data.WMTSCapabilitiesReader({
                 baseUrl: this.url, 
                 version: this.version, 
-                mapProjection: this.getMapProjection()
+                mapProjection: this.getMapProjection(),
+                preferredEncoding: this.preferredEncoding || undefined
             })
         });
     },
