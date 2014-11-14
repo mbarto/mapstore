@@ -3,5 +3,6 @@
 var localConfig = {
    geoStoreBase: "",
    proxy:"/http_proxy/proxy/?url=",
-   defaultLanguage: "en"
+   defaultLanguage: "en",
+   loginDataStorage: sessionStorage
 };

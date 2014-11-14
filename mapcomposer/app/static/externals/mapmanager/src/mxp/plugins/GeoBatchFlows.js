@@ -39,7 +39,8 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
     buttonText: "Workflows",
 	flowsListTitle:'Flows',
     runButtonText:'Run',
-    consumersGridTitle: 'Consumers',
+    consumersGridTitle: 'Active',
+    archivedGridTitle: 'Archived',
     flowRunFormCategory: 'GEOBATCH_RUN_CONFIGS',
     loginManager: null,    
     setActiveOnOutput: true,
@@ -51,6 +52,11 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
       * has the base configuration for each flow to run
       */
     runConfigs: {},
+	/** api: configuration[skipFlowsNotInRunConfigs]
+      * a true/false value used to only show flows configured
+	  * runConfigs. By default all geobatch flows are shown.
+      */
+    skipFlowsNotInRunConfigs: false,
      /** api: configuration[defaultRunConfig]
       * a default configuration to use.
       * if present it will be used as configuration when a 
@@ -106,16 +112,20 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
                   //update the right grid on select
                  rowselect: function(flowsgrid,rowIndex,record){
                     var flowid = record.get('id');
+					var flowName = record.get('name');
                     flowsgrid.grid.refOwner.consumers.changeFlowId(flowid);
+					flowsgrid.grid.refOwner.archived.changeFlowId(flowid);
                     if(flowsgrid.grid.runBtn){
                         //TODO manage run local or other forms
                         var runBtn = flowsgrid.grid.runBtn;
                         if(this.runConfigs[flowid]){
                             runBtn.setDisabled(false);
                             runBtn.flowId = flowid;
+							runBtn.flowName = flowName;
                         }else{
                             runBtn.setDisabled(true);
                             runBtn.flowId = null;
+                            runBtn.flowName = null;
                         }
                         
                     }
@@ -132,7 +142,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
                 disabled:true,
                 scope:this,
                 handler:function(btn){
-                    this.showRunLocalForm(btn.flowId);
+                    this.showRunLocalForm(btn.flowId, btn.flowName);
                 }
             });
             buttons.push("->");
@@ -152,7 +162,8 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
             ref:'list',
             collapsible:true,   
             auth: this.auth,
-            sm: selectionModel
+            sm: selectionModel,
+			flows: this.skipFlowsNotInRunConfigs ? this.runConfigs : null
         }
         
         Ext.apply(this.outputConfig,{
@@ -169,18 +180,38 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
             },
             title: this.buttonText,
             items:[
-                {
-                    xtype:'mxp_geobatch_consumer_grid',
-                    geoBatchRestURL: this.geoBatchRestURL,
-                    title: this.consumersGridTitle,
-                    layout:'fit',
-                    autoScroll:true,
-                    flowId: this.flowId,
-                    auth: this.auth,
-                    autoWidth:true,
-                    region:'center',
-                    ref:'consumers'
-                },  
+				{
+					xtype:'tabpanel',
+					region:'center',
+					
+					activeItem: 0,
+					items:[{
+						xtype:'mxp_geobatch_consumer_grid',
+						geoBatchRestURL: this.geoBatchRestURL,
+						geoStoreRestURL: this.geoStoreRestURL,
+						title: this.consumersGridTitle,
+						layout:'fit',
+						autoScroll:true,
+						flowId: this.flowId,
+						auth: this.auth,
+						autoWidth:true,
+						mode: 'active',
+						hideMode:'offsets',
+						ref:'../consumers'
+					},{
+						xtype:'mxp_geobatch_consumer_grid',
+						geoStoreRestURL: this.geoStoreRestURL,
+						title: this.archivedGridTitle,
+						layout:'fit',
+						autoScroll:true,
+						flowId: this.flowId,
+						auth: this.auth,
+						autoWidth:true,
+						mode: 'archived',
+						hideMode:'offsets',
+						ref:'../archived'
+					}]
+				},  
                 flowsGrid
             ]
         });
@@ -209,7 +240,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
         this.tab = mxp.plugins.GeoBatchFlows.superclass.addOutput.apply(this, arguments);
         return this.tab;
     },
-    showRunLocalForm: function(flowId,fileId){
+    showRunLocalForm: function(flowId,flowName){
         //apply local parameters to the configuration flor the selected flow
         if(this.runConfigs[flowId]){
             var me = this;
@@ -218,8 +249,9 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
                 //xtype:'geobatch_run_local_form',
                 //layout:'fit',
                 flowId: flowId,
-                fileId:fileId,
+                //fileId:fileId,
                 geoBatchRestURL: this.geoBatchRestURL,
+				adminUrl: this.target.adminUrl,
                 //baseDir: this.baseDir,
                 //mediaContent: this.target.initialConfig.mediaContent
                 listeners:{
@@ -239,10 +271,10 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
         var win = new Ext.Window({
                     iconCls:'update_manager_ic',
                     xtype:'form',
-                    title:this.runButtonText + " " + flowId,
+                    title:this.runButtonText + " " + flowName,
                     width: 300,
                     height: 400, 
-                    path:'csv/New Folder',
+                    //path:'csv/New Folder',
                     minWidth:250,
                     minHeight:200,
                     layout:'fit',

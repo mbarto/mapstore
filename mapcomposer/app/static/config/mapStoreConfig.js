@@ -1,7 +1,15 @@
 {
-   
+   "geoStoreBase": "http://localhost:8082/geostore/rest/",
    "scaleOverlayMode": "basic",
    "gsSources":{ 
+		"default": {
+			"ptype": "gxp_wmscsource",
+			"title": "Default GeoServer",
+			"url": "http://localhost:8080/geoserver/ows",
+			"SRS": "EPSG:900913",
+			"version":"1.1.1",
+			"loadingProgress": true
+		},
 		"mapquest": {
 			"ptype": "gxp_mapquestsource"
 		}, 
@@ -26,7 +34,7 @@
 	"map": {
 		"projection": "EPSG:900913",
 		"units": "m",
-		"center": [1250000.000000, 5370000.000000],
+		"center": [-10206295, 4579425],
 		"zoom":5,
 		"maxExtent": [
 			-20037508.34, -20037508.34,
@@ -77,7 +85,24 @@
 				"args": [
 					"None", {"visibility": false}
 				]
-			}
+			},{
+                "source": "default",
+                "group" : "Overlays",
+				"title" : "States",
+				"name"  : "topp:states",
+				"tiled" : false,
+				"visibility": true,
+				"queryable": true,
+				"llbbox": [-124.731422,24.955967,-66.969849,49.371735]
+            },{
+                "source": "default",
+                "group" : "Overlays",
+				"title" : "Bugs Sites",
+				"name"  : "sf:bugsites",
+				"tiled" : false,
+				"visibility": true,
+				"queryable": true
+            }
 		]
 	},
     "customPanels":[
@@ -173,6 +198,13 @@
 		}, {
 			"ptype": "gxp_languageselector",
 			"actionTarget": {"target": "panelbbar", "index": 3}
-		}
+		}, {
+ 			"ptype": "gxp_styler",
+ 			"actionTarget": "paneltbar",
+ 			"sameOriginStyling": false,
+ 			"width": 500,
+ 			"index": 29
+ 		}
+
 	]
 }

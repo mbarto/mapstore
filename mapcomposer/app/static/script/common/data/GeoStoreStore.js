@@ -62,8 +62,8 @@ MapStore.data.GeoStoreStore = Ext.extend(Ext.data.JsonStore, {
 			idProperty: 'id',
 			remoteSort: false,
 			//get the additional attribute as record
-			fields: config.additionalAttribute ? this.fields.concat(config.additionalAttribute): this.fields,
-			sortInfo: { field: "name", direction: "ASC" },
+			fields: config.fields ? config.fields : (config.additionalAttribute ? this.fields.concat(config.additionalAttribute): this.fields),
+			//sortInfo: { field: "name", direction: "ASC" },
 			proxy : new Ext.data.HttpProxy({
 				api:{
 					read: this.getSearchUrl(config),

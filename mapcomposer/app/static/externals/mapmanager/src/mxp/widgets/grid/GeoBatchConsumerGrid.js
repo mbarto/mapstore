@@ -54,11 +54,31 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
 	 * {string} the GeoBatch flow name to manage
 	 */	
     flowId: 'ds2ds_zip2pg',
-     /**
+    /**
 	 * Property: geoBatchRestURL
 	 * {string} the GeoBatch ReST Url
 	 */
     geoBatchRestURL: 'http://localhost:8080/geobatch/rest/',
+	
+	/**
+	 * Property: geoStoreRestURL
+	 * {string} the GeoStore ReST Url
+	 */
+    geoStoreRestURL: 'http://localhost:8080/geostore/rest/',
+	
+	/**
+	 * Property: mode
+	 * {string} mode of the grid (active or archived)
+	 */
+    mode: 'active',
+	
+	 /**
+	 * Property: autoRefreshInterval
+	 * {integer} the Consumers auto refresh interval (in seconds).
+	 */
+    autoRefreshInterval: 5,
+	
+	autoRefreshState: false,
     /**
 	 * Property: GWCRestURL
 	 * {string} the GWC ReST Url. If present, a button
@@ -69,35 +89,32 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
     /* i18n */
     statusText: 'Status',
     startDateText: 'StartDate',
-    startFileText:'File',
+    fileText:'File',
+    actionText:'Action',
+    taskText:'Task',
+    progressText:'Progress',
     refreshText:'Refresh',
+    autoRefreshText:'Auto Refresh',
     descriptionText:'Description',
     tooltipDelete: 'Clear this',
     tooltipLog: 'Check Log',
-    autoExpandColumn: 'description',
+    autoExpandColumn: 'task',
     clearFinishedText: 'Clear Finished',
+    archiveText: 'Archive Selected',
     loadingMessage: 'Loading...',
     cleanMaskMessage:'Removing consumer data...',
     textConfirmDeleteMsg: 'Do you confirm you want to delete event consumer with UUID:{uuid} ? ',
     errorDeleteConsumerText:'There was an error while deleting consumer',
     confirmClearText: 'Do you really want to remove all consumers with SUCCESS or FAIL state?',
+    titleConfirmClearMsg: 'Confirm',
+    confirmArchiveText: 'Do you want to archive the selected runs?',
+    titleConfirmArchiveMsg: 'Confirm',
     GWCButtonLabel: 'Tile Cache',
     /* end of i18n */
     //extjs grid specific config
     autoload: this.flowsgrid ? true : false,
     loadMask:true,
-    viewConfig: {
-        getRowClass: function(record, index) {
-            var c = record.get('status');
-            if (c == 'SUCCESS') {
-                return 'row-green';
-            } else if (c == 'RUNNING') {
-                return 'row-yellow';
-            }else if (c == 'FAIL'){
-                return 'row-red';
-            }
-        }
-    },
+	cls:'geobatch-consumer-grid',
    
     initComponent : function() {
         //FIX FOR IE10 and responseXML TODO: port this as a global fix
@@ -115,50 +132,153 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
                         return this.readRecords(data);
                     }
         });
+		
+		this.resourceManager = new GeoStore.Resource({
+			authorization: this.auth,
+            url: this.geoStoreRestURL + 'resources'
+		});
+		
         // create the Data Store
-        this.store = new Ext.data.Store({
-            autoLoad: this.autoload,
-            // load using HTTP
-            url: this.geoBatchRestURL + 'flows/' + this.flowId + '/consumers',
-            record: 'consumer',
-            idPath: 'uuid',
-            fields: [{name: 'status', mapping: '@status'},
-                   'uuid',
-                   'startDate',
-                   'description'],
-            reader:  new ie10XmlStore({
-                 record: 'consumer',
-                idPath: 'uuid',
-                fields: [{name: 'status', mapping: '@status'},
-                   'uuid',
-                   'startDate',
-                   'description']
-            }),
-            listeners:{
-                beforeload: function(a,b,c){
-                   
-                    if( a.proxy.conn.headers ){
-                        if(this.auth){
-                            a.proxy.conn.headers['Authorization'] = this.auth;
-                        }
-                        a.proxy.conn.headers['Accept'] = 'application/xml';
-                    }else{
-                        a.proxy.conn.headers = {'Accept': 'application/xml'};
-                        if(this.auth){
-                            a.proxy.conn.headers['Authorization'] = this.auth;
-                        }
-                    }
-                   
-                }
-            },
-            sortInfo: {
-                field: 'startDate',
-                direction: 'DESC' // or 'DESC' (case sensitive for local sorting)
-            }
-        });
+        this.store;
+		if(this.mode === 'active') {
+
+			this.store = new Ext.data.Store({
+				autoLoad: this.autoload,
+				// load using HTTP
+				url: this.geoBatchRestURL + 'flows/' + this.flowId + '/consumers',
+				record: 'consumer',
+				idPath: 'uuid',
+				fields: [{name: 'status', mapping: '@status'},
+					   'uuid',
+					   'startDate',
+					   'description',
+					   'details'],
+				reader:  new ie10XmlStore({
+					 record: 'consumer',
+					idPath: 'uuid',
+					fields: [{name: 'status', mapping: '@status'},
+					   'uuid',
+					   'startDate',
+					   'description',
+					   {name:'details',convert: function(v) {
+							return Ext.decode(v)
+					   }}]
+				}),
+				listeners:{
+					beforeload: function(a,b,c){
+					   
+						if( a.proxy.conn.headers ){
+							if(this.auth){
+								a.proxy.conn.headers['Authorization'] = this.auth;
+							}
+							a.proxy.conn.headers['Accept'] = 'application/xml';
+						}else{
+							a.proxy.conn.headers = {'Accept': 'application/xml'};
+							if(this.auth){
+								a.proxy.conn.headers['Authorization'] = this.auth;
+							}
+						}
+					   
+					}
+				},
+				sortInfo: {
+					field: 'startDate',
+					direction: 'DESC' // or 'DESC' (case sensitive for local sorting)
+				}
+			});
+		} else {
+			this.store = new MapStore.data.GeoStoreStore({
+				autoLoad: true,
+				categoryName: "ARCHIVEDRUNS",
+				geoStoreBase: this.geoStoreRestURL,
+				currentFilter: 'NOTHING',
+				auth: this.auth,
+				fields: [
+					{name: 'status', mapping: '@status'},
+					   {name: 'uuid', mapping: 'name'},
+					   'startDate',
+					   'description',
+					   {name:'details',convert: function(v) {
+							return {
+								events: ['aa'],
+								progress:[{task:'t',progress:0}],
+								actions: [{name:'act',progress:{task:'t',progress:0}}]
+							}
+					   }}
+				]
+			});
+		}
     
-    
+		var expander = new Ext.ux.grid.RowExpander({
+			getRowClass : function(record, rowIndex, p, ds){
+				var c = record.get('status');
+				var colorClass;
+				if (c == 'SUCCESS') {
+					colorClass =  'row-green';
+				} else if (c == 'RUNNING') {
+					colorClass =  'row-yellow';
+				}else if (c == 'FAIL'){
+					colorClass =  'row-red';
+				}
+				p.cols = p.cols-1;
+				var content = this.bodyContent[record.id];
+				if(!content && !this.lazyRender){
+					content = this.getBodyContent(record, rowIndex);
+				}
+				if(content){
+					p.body = content;
+				}
+				return (this.state[record.id] ? 'x-grid3-row-expanded' : 'x-grid3-row-collapsed') + ' ' + colorClass;
+			},
+			tpl: new Ext.XTemplate(
+				'<table width="100%">',
+					'<tr><th width="200"><b>Action</b></th><th><b>Task</b></th><th width="172"><b>Progress</b></th></tr>',
+					'<tpl for="details.actions">',
+						'<tr>',
+							'<td>{name}</td>',
+							'<tpl for="progress">',
+								'<td>{task}</td><td><span class="action-progress">{progress}</span></td>',
+							'</tpl>',
+						'</tr>',
+					'</tpl>',
+				'</table>'
+			),
+			enableCaching: false,
+			listeners: {
+				expand: function(exp, record, body, rowIndex) {
+					var row = exp.grid.view.getRow(rowIndex);
+					Ext.each(Ext.DomQuery.select('.action-progress', row), function(progressContainer) {
+						var progress = Math.round(parseFloat(progressContainer.innerHTML));
+						progressContainer.innerHTML = '';
+						(function() {
+						 new Ext.ProgressBar({
+						  renderTo : progressContainer,
+						  text : progress + "%",
+						  value : (progress / 100)
+						 });
+						}).defer(25);
+					}, this);
+				},
+				scope: this
+			}
+		});
+	
+		
+	
+		this.plugins = [expander];
        
+		if(this.mode === 'active') {
+			this.getSelectionModel().on({
+				rowselect: function(selModel) {
+					this.archive.setDisabled(selModel.getSelections().length === 0);
+				},
+				rowdeselect: function(selModel) {
+					this.archive.setDisabled(selModel.getSelections().length === 0);
+				},
+				scope: this
+			});
+		}
+	   
         this.tbar = [{
                 iconCls:'refresh_ic',
                 xtype:'button',
@@ -167,10 +287,64 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
                 handler:function(){
                     this.store.load();
                 }
+            },{
+                iconCls:'auto_refresh_ic',
+                xtype:'button',
+				hidden: this.mode === 'archived',
+                text:this.autoRefreshText,
+				enableToggle: true,
+                scope:this,
+                toggleHandler:function(btn, state){
+                    this.autoRefreshState = state;
+					if(state) {
+						this.autoRefresh();
+					}
+                }
             },"->",{
+                iconCls:'archive_ic',
+                xtype:'button',
+				ref:'../archive',
+				hidden: this.mode === 'archived',
+                text:this.archiveText,
+				disabled:true,
+                scope:this,
+                handler:function(){
+                    Ext.Msg.confirm(
+						this.titleConfirmArchiveMsg,
+						this.confirmArchiveText,
+						function(btn) {
+							if(btn=='yes') {
+								var resource = {
+									name: this.flowId + '_' + this.getSelectionModel().getSelections()[0].get('uuid'),
+									description: 'test',
+									category: 'ARCHIVEDRUNS',
+									attributes: {}
+									
+								};
+								//if the resource editor has the metod, call it
+								
+								resource.blob = Ext.encode(this.getSelectionModel().getSelections()[0].data);
+								this.resourceManager.create(resource,
+									//SUCCESS
+									function() {
+										Ext.Msg.alert('Success');
+									},
+									//FAIL
+									function() {
+										Ext.Msg.alert('Failed');
+									}
+								);
+								
+							}
+						}, 
+						this
+					);
+                }
+        },{
                 iconCls:'broom_ic',
                 xtype:'button',
                 text:this.clearFinishedText,
+				hidden: this.mode === 'archived',
                 scope:this,
                 handler:function(){
                     var me = this;
@@ -185,6 +359,9 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
                     });
                 }
         }];
+		
+		
+		
         if(this.GWCRestURL){
             this.bbar =[
             {
@@ -196,18 +373,66 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
         ]
         }
         this.columns= [
+			expander,
             {id: 'uuid', header: "ID", width: 220, dataIndex: 'uuid', sortable: true},
-            {id: 'status', header: this.statusText, width: 100, dataIndex: 'status', sortable: true},
+            {id: 'status', header: this.statusText, width: 100, dataIndex: 'status', sortable: true,hidden: this.mode === 'archived',},
             {id: 'startDate', header: this.startDateText, width: 180, dataIndex: 'startDate', sortable: true},
-            {id: 'file', header: this.startFileText, dataindex: 'description',width: 180, 
+            {id: 'file', header: this.fileText, dataIndex: 'details',width: 180, 
                 renderer: function(val){
-                    var index = val.indexOf('first event:');
-                    if( index > 0) {
-                        return val.substring(index + 12,val.length -1); 
-                    } 
+                    return val.events[0]
                 } 
             },
-            {id: 'description', header: this.descriptionText, dataIndex: 'description', sortable: true},
+			{id: 'task', header: this.taskText, dataIndex: 'details',width: 180, 
+                renderer: function(val){
+                    return val.progress[0].task
+                } 
+            },
+			{id: 'progress', header: this.progressText, dataIndex: 'details',width: 180, 
+				renderer : function(val, metaData, record, rowIndex, colIndex, store) {
+					var progress = Math.round(val.progress[0].progress);
+					var id = Ext.id();
+					(function() {
+					 new Ext.ProgressBar({
+					  renderTo : id,
+					  text : progress + "%",
+					  value : (progress / 100)
+					 });
+					}).defer(25);
+					return '<span id="' + id + '"></span>';
+					
+				} 
+            },
+			/*{id: 'description', header: this.actionText, dataIndex: 'description', 
+                renderer: function(val){
+                    var progress = Ext.decode(val).progress || [];
+					var actions = [];
+					for(var i = 0, len = progress.length; i < len; i++) {
+						actions.push(progress[i].action);
+					}
+					return actions.join('<br/>');
+                } 
+            },
+			{id: 'description', header: this.taskText, dataIndex: 'description', 
+                renderer: function(val){
+                    var progress = Ext.decode(val).progress || [];
+					var tasks = [];
+					for(var i = 0, len = progress.length; i < len; i++) {
+						tasks.push(progress[i].task);
+					}
+					return tasks.join('<br/>');
+                } 
+            },
+			{id: 'progress', header: this.progressText, dataIndex: 'description', 
+                renderer: function(val){
+                    var progress = Ext.decode(val).progress || [];
+					var percents = [];
+					for(var i = 0, len = progress.length; i < len; i++) {
+						percents.push(progress[i].progress + '%');
+					}
+					return percents.join('<br/>');
+                } 
+            },*/
+            //{id: 'description', header: this.descriptionText, dataIndex: 'description', sortable: true},
             {
                     xtype:'actioncolumn',
                     width: 35,
@@ -244,6 +469,20 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
         ],
         mxp.widgets.GeoBatchConsumerGrid.superclass.initComponent.call(this, arguments);
     },
+	
+	/**
+     *    private: method[autoRefresh] refresh the grid, and if autoRefresh is active, schedule next refresh
+     *      
+     */
+    autoRefresh: function() {
+		if(this.autoRefreshState) {
+			this.store.on('load', function() {
+				this.autoRefresh.createDelegate(this).defer(this.autoRefreshInterval * 1000);
+			}, this, {single: true});
+		}
+		this.store.load();
+	},
+	
     /**
      *    private: method[confirmCleanRow] show the confirm message to remove a consumer
      *      * grid : the grid
@@ -461,9 +700,16 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
      * 
      */
     changeFlowId: function ( flowId ) {
-        var url = this.geoBatchRestURL + 'flows/' + flowId + '/consumers';
-		this.store.proxy.setUrl(url, true);
-        
+		if(this.mode === 'archived') {
+			this.store.currentFilter = flowId+'_*';
+			this.store.proxy.api.read.url = this.store.getSearchUrl();
+		} else {
+			var url = this.geoBatchRestURL + 'flows/' + flowId + '/consumers';
+			this.store.proxy.setUrl(url, true);
+		}
+		
+		this.flowId = flowId;
+		this.archive.setDisabled(true);
         this.store.load();
     }
     

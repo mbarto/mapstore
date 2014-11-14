@@ -256,6 +256,9 @@ mxp.plugins.Tool = Ext.extend(Ext.util.Observable, {
      *  :returns: ``Array`` The actions added.
      */
     addActions: function(actions) {
+		if(this.autoOpen) {
+			this.addOutput();
+		}
         actions = actions || this.actions;
 		
         if (!actions || this.actionTarget === null) {

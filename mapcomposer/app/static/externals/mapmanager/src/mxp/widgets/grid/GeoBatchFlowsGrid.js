@@ -64,6 +64,8 @@ mxp.widgets.GeoBatchFlowsGrid = Ext.extend(Ext.grid.GridPanel, {
     //extjs grid specific config
     autoload:true,
     loadMask:true,
+	
+	flows: null,
     
    
     initComponent : function() {
@@ -117,7 +119,15 @@ mxp.widgets.GeoBatchFlowsGrid = Ext.extend(Ext.grid.GridPanel, {
                         }
                     }
                    
-                }
+                },
+				load: function(store, records, options) {
+					if(this.flows) {
+						store.filterBy(function(record) {
+							return this.flows[record.get('id')];
+						}, this);
+					}
+				},
+				scope: this
             },
             sortInfo: {
                 field: 'id',

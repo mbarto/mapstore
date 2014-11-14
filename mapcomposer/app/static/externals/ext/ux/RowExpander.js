@@ -128,12 +128,20 @@ Ext.ux.grid.RowExpander = Ext.extend(Ext.util.Observable, {
         view.getRowClass = this.getRowClass.createDelegate(this);
 
         view.enableRowBody = true;
-
+		
+		grid.getView().on('refresh', this.onRefresh, this);
 
         grid.on('render', this.onRender, this);
         grid.on('destroy', this.onDestroy, this);
     },
 
+	// @private
+    onRefresh: function() {
+		this.grid.getView().mainBody.select('.x-grid3-row-expanded').each(function(row) {
+			this.expandRow(row.dom);
+		}, this);
+	},
+	
     // @private
     onRender: function() {
         var grid = this.grid;
