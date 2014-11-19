@@ -195,6 +195,10 @@ mxp.widgets.GeoBatchRunLocalForm = Ext.extend(Ext.Panel, {
        
     },
     
+	isForm: function() {
+		return true;
+	},
+	
     runLocal: function(flowId,node){
         Ext.Ajax.request({
 	       url: this.geoBatchRestURL + 'flows/' + flowId +'/runlocal', 

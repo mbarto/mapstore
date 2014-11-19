@@ -66,6 +66,16 @@
          "geoBatchRestURL":"http://localhost:9000/geobatch/rest/",
          "geoStoreRestURL":"http://localhost:8082/geostore/rest/",
 		 "skipFlowsNotInRunConfigs": true,
+		 "showConsumersDetails": true,
+		 "consumersPlugins": [
+			{
+				"ptype": "importmetadata",
+				"wfsURL": "http://localhost:8080/geoserver/ows", 
+                "metadataFeature": "import_metadata", 
+                "metadataNS": "lose",
+				"wfsVersion": "1.1.0"
+			}
+		 ],
 		 "autoOpen": true,
          "runConfigs": {
             "targetrunner":{
@@ -81,16 +91,14 @@
                 "path":"/archi"
             },
 			"roadcalculator":{
-                "xtype": "geobatch_run_local_form",
-                "baseDir": "/home/geosolutions/admin",
-                "fileRegex": "\\.ti[f]{1,2}$",
-                "path":" /ndvi/"
+                "xtype": "geobatch_run_local",
+				"fileName": "geobatch.none"
             },
 			"pterrunner":{
                 "xtype": "geobatch_run_local_form",
-                "baseDir": "/home/geosolutions/admin",
-                "fileRegex": "\\.ti[f]{1,2}$",
-                "path":" /ndvi/"
+                "baseDir": "j:\\Develop\\destination\\lose_ingestion_temp",
+                "fileRegex": "\\.zip$",
+                "path":"/pter"
             }
 
            

@@ -312,6 +312,11 @@ left: 80px !important;
 .delete_ic {
     background:url(../img/delete.png)
 }
+
+.metadata_ic {
+    background:url(../img/page_white_text.png)
+}
+
 .action_column_btn{
     background-repeat: no-repeat;
     width:20px;
@@ -365,4 +370,11 @@ padding: 4px;
 
 .geobatch-consumer-grid  .x-grid3-row-body {
 	margin-right: 70px;
+}
+
+.x-grid3-row-collapsed .x-grid3-row-body {
+	position: absolute !important;
+	top: -10000px !important;
+	left: -10000px !important;
+	display: block !important;
 }

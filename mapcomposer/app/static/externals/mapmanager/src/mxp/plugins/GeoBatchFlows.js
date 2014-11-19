@@ -44,6 +44,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
     flowRunFormCategory: 'GEOBATCH_RUN_CONFIGS',
     loginManager: null,    
     setActiveOnOutput: true,
+	showConsumersDetails: false,
     /* api configuration
     baseDir: '/home/geosolutions/admin/',
     
@@ -115,6 +116,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 					var flowName = record.get('name');
                     flowsgrid.grid.refOwner.consumers.changeFlowId(flowid);
 					flowsgrid.grid.refOwner.archived.changeFlowId(flowid);
+					flowsgrid.grid.refOwner.tabs.activate(flowsgrid.grid.refOwner.consumers);
                     if(flowsgrid.grid.runBtn){
                         //TODO manage run local or other forms
                         var runBtn = flowsgrid.grid.runBtn;
@@ -142,7 +144,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
                 disabled:true,
                 scope:this,
                 handler:function(btn){
-                    this.showRunLocalForm(btn.flowId, btn.flowName);
+                    this.runWorkflow(btn.flowId, btn.flowName);
                 }
             });
             buttons.push("->");
@@ -183,8 +185,8 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 				{
 					xtype:'tabpanel',
 					region:'center',
-					
-					activeItem: 0,
+					ref:'tabs',
+					//activeItem: 0,
 					items:[{
 						xtype:'mxp_geobatch_consumer_grid',
 						geoBatchRestURL: this.geoBatchRestURL,
@@ -197,7 +199,9 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 						autoWidth:true,
 						mode: 'active',
 						hideMode:'offsets',
-						ref:'../consumers'
+						ref:'../consumers',
+						showDetails: this.showConsumersDetails,
+						plugins: this.consumersPlugins
 					},{
 						xtype:'mxp_geobatch_consumer_grid',
 						geoStoreRestURL: this.geoStoreRestURL,
@@ -209,7 +213,9 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 						autoWidth:true,
 						mode: 'archived',
 						hideMode:'offsets',
-						ref:'../archived'
+						ref:'../archived',
+						showDetails: this.showConsumersDetails,
+						plugins: this.consumersPlugins
 					}]
 				},  
                 flowsGrid
@@ -240,8 +246,33 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
         this.tab = mxp.plugins.GeoBatchFlows.superclass.addOutput.apply(this, arguments);
         return this.tab;
     },
-    showRunLocalForm: function(flowId,flowName){
-        //apply local parameters to the configuration flor the selected flow
+	runWorkflow: function(flowId,flowName){
+		if(this.runConfigs[flowId]){
+			var config = Ext.apply(this.runConfigs[flowId],{
+                flowId: flowId,
+                geoBatchRestURL: this.geoBatchRestURL,
+				adminUrl: this.target.adminUrl,                
+            });
+			var handler = Ext.create(config);
+			if(handler.isForm()) {
+				this.showRunLocalForm(flowId,flowName,handler);
+			} else {
+				handler.on({
+					success: function(flowId){
+						Ext.defer(function(){
+							var consumers = this.tab.consumers;
+							consumers.store.load()
+						},5000, this);
+					},
+					scope: this
+				});
+				handler.startFlow(flowId,flowName);
+			}
+		}
+	},
+	
+    showRunLocalForm: function(flowId,flowName,handler){
+        /*//apply local parameters to the configuration flor the selected flow
         if(this.runConfigs[flowId]){
             var me = this;
             
@@ -267,26 +298,36 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
         }else if(this.defaultConfig){
             
             //TODO manage default config
-        }
+        }*/
         var win = new Ext.Window({
-                    iconCls:'update_manager_ic',
-                    xtype:'form',
-                    title:this.runButtonText + " " + flowName,
-                    width: 300,
-                    height: 400, 
-                    //path:'csv/New Folder',
-                    minWidth:250,
-                    minHeight:200,
-                    layout:'fit',
-                    autoScroll:false,
-                    closeAction:'hide',
-                    maximizable: true, 
-                    modal:true,
-                    resizable:true,
-                    draggable:true,
-                    items: [runFormConfig]
+			iconCls:'update_manager_ic',
+			xtype:'form',
+			title:this.runButtonText + " " + flowName,
+			width: 300,
+			height: 400, 
+			//path:'csv/New Folder',
+			minWidth:250,
+			minHeight:200,
+			layout:'fit',
+			autoScroll:false,
+			closeAction:'hide',
+			maximizable: true, 
+			modal:true,
+			resizable:true,
+			draggable:true,
+			items: [handler]
         });
         win.show();
+		handler.on({
+			success: function(flowId){
+				win.close();
+				Ext.defer(function(){
+					var consumers = this.tab.consumers;
+					consumers.store.load()
+				},5000, this);
+			},
+			scope: this
+		});
     }
 });
 

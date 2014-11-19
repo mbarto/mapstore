@@ -32,6 +32,14 @@ MapStore.data.GeoStoreStore = Ext.extend(Ext.data.JsonStore, {
 	 */
 	additionalAttribute: null,
 	/**
+	 * Include attributes in search responses
+	 */
+	includeAttributes: false,
+	/**
+	 * Include attributes and data in search responses
+	 */
+	fullResource: false,
+	/**
 	 * filter
 	 */
 	currentFilter: '***',
@@ -111,7 +119,10 @@ MapStore.data.GeoStoreStore = Ext.extend(Ext.data.JsonStore, {
         return config.geoStoreBase + 'extjs/search' 
 			+ (config.categoryName ? '/category/'+ config.categoryName : '') 
 			+ (config.currentFilter ?'/' + config.currentFilter:'')
-			+ (config.additionalAttribute ?'/' + config.additionalAttribute:'');
+			+ (config.additionalAttribute ?'/' + config.additionalAttribute:'')
+			+ (config.includeAttributes ?'?includeAttributes=true': '')
+			+ (config.fullResource ?'?includeAttributes=true&includeData=true': '')
+			;
     },
 	/**
 	 * Search url creation
