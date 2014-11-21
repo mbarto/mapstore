@@ -1,0 +1,22 @@
+.metadata_ic {
+    background:url(../img/page_white_text.png) no-repeat;
+}
+
+.geobatch-consumer-grid  .x-grid3-row-body {
+	margin-right: 100px;
+}
+
+.metadata_main {
+}
+
+.metadata_item {
+	font-size: 11px;
+	line-height: 20px;
+	margin-left: 5px;
+}
+
+.metadata_item label {
+	font-weight: bold;
+	width: 120px;
+	display: inline-block;
+}

@@ -9,6 +9,7 @@ var urls = [
 	//[(/^\/(geonetwork)/), require("./root/geonetwork").app],  // Enable this only for the GeoNetwork integration
     [(/^\/(composer)/), require("./root/composer").app],
     [(/^\/(manager)/), require("./root/manager").app],
+    [(/^\/(managerLose)/), require("./root/managerLose").app],
 	[(/^\/(wps)/), require("./root/wps").app],                // to test WPS plugin
 	[(/^\/(test)/), require("./root/test").app],              // to test the MapStore Viewport
     [(/^\/(viewer(.html)?)/), require("./root/viewer").app],

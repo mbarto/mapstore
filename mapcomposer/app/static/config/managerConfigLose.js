@@ -72,6 +72,7 @@
 				"ptype": "importmetadata",
 				"wfsURL": "http://localhost:8080/geoserver/ows", 
                 "metadataFeature": "import_metadata", 
+                "metadataErrorsFeature": "import_metadata_errors", 
                 "metadataNS": "lose",
 				"wfsVersion": "1.1.0"
 			}
@@ -91,8 +92,14 @@
                 "path":"/archi"
             },
 			"roadcalculator":{
-                "xtype": "geobatch_run_local",
-				"fileName": "geobatch.none"
+                "xtype": "geobatch_run_roads_processing",
+				"wfsURL": "http://localhost:8080/geoserver/ows", 
+                "partnerFeature": "siig_d_partner", 
+                "partnerNS": "lose",
+				"metadataFeature": "import_metadata", 
+                "metadataNS": "lose",
+				"wfsVersion": "1.1.0",
+				"height": 100
             },
 			"pterrunner":{
                 "xtype": "geobatch_run_local_form",
