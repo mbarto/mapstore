@@ -255,7 +255,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
             });
 			var handler = Ext.create(config);
 			if(handler.isForm()) {
-				this.showRunLocalForm(flowId,flowName,handler);
+				this.showRunLocalForm(flowId, flowName, handler, config);
 			} else {
 				handler.on({
 					success: function(flowId){
@@ -271,7 +271,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 		}
 	},
 	
-    showRunLocalForm: function(flowId,flowName,handler){
+    showRunLocalForm: function(flowId, flowName, handler, config){
         /*//apply local parameters to the configuration flor the selected flow
         if(this.runConfigs[flowId]){
             var me = this;
@@ -304,7 +304,7 @@ mxp.plugins.GeoBatchFlows = Ext.extend(mxp.plugins.Tool, {
 			xtype:'form',
 			title:this.runButtonText + " " + flowName,
 			width: 300,
-			height: 400, 
+			height: config.height || 400, 
 			//path:'csv/New Folder',
 			minWidth:250,
 			minHeight:200,
