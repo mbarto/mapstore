@@ -134,7 +134,7 @@ mxp.widgets.GeoBatchRunRoadsProcessing = Ext.extend(Ext.Panel, {
 		var filter = new OpenLayers.Filter.Comparison({
 			type : OpenLayers.Filter.Comparison.LIKE,
 			property : "nome_file",
-			value : this.partner.getValue()+ '_C_Grafo*'
+			value : this.partner.getValue()+ '_C_Grafo*_CALCS'
 		});
         var proxy= new GeoExt.data.ProtocolProxy({ 
             protocol: new OpenLayers.Protocol.WFS({ 
