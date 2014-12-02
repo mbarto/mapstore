@@ -106,6 +106,16 @@
                 "baseDir": "j:\\Develop\\destination\\lose_ingestion_temp",
                 "fileRegex": "\\.zip$",
                 "path":"/pter"
+            },
+			"migration":{
+                "xtype": "geobatch_run_migration",
+				"wfsURL": "http://localhost:8080/geoserver/ows", 
+                "partnerFeature": "siig_d_partner", 
+                "partnerNS": "lose",
+				"metadataFeature": "import_metadata", 
+                "metadataNS": "lose",
+				"wfsVersion": "1.1.0",
+				"height": 100
             }
 
            
