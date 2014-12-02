@@ -117,6 +117,8 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
     confirmArchiveText: 'Do you want to archive the selected runs?',
     titleConfirmArchiveMsg: 'Confirm',
     GWCButtonLabel: 'Tile Cache',
+	errorContactingGeobatch: 'Error loading runs from GeoBatch',
+	errorContactingGeostore: 'Error loading archived runs from GeoStore',
     /* end of i18n */
     //extjs grid specific config
     //autoload: this.flowsgrid ? true : false,
@@ -219,6 +221,13 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
 					load: function() {
 						this.checkCanArchive();
 					},
+					exception: function(proxy, type, action, options, response) {
+						Ext.Msg.show({
+						   msg: this.errorContactingGeobatch,
+						   buttons: Ext.Msg.OK,
+						   icon: Ext.MessageBox.ERROR
+						});
+					},
 					scope: this
 				},
 				sortInfo: {
@@ -249,7 +258,17 @@ mxp.widgets.GeoBatchConsumerGrid = Ext.extend(Ext.grid.GridPanel, {
 					{name: 'log', mapping: 'data', convert: function(v) {
 						return Ext.decode(v).log
 					}}
-				]
+				],
+				listeners: {
+					exception: function(proxy, type, action, options, response) {
+						Ext.Msg.show({
+						   msg: this.errorContactingGeostore,
+						   buttons: Ext.Msg.OK,
+						   icon: Ext.MessageBox.ERROR
+						});
+					},
+					scope: this
+				}
 			});
 		}
     
