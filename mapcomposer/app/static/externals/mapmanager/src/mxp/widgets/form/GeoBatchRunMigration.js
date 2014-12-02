@@ -23,11 +23,11 @@ Ext.ns("mxp.widgets");
 /**
  * 
  */
-mxp.widgets.GeoBatchRunRoadsProcessing = Ext.extend(Ext.Panel, {
+mxp.widgets.GeoBatchRunMigration = Ext.extend(Ext.Panel, {
     iconCls:'update_manager_ic',
-    /** api: xtype[geobatch_run_roads_processing]
+    /** api: xtype[geobatch_run_migration]
      */
-    xtype:'geobatch_run_roads_processing',
+    xtype:'geobatch_run_migration',
     
     /** api: config[baseDir]
      * ``string`` baseDir to concatenate to the dir from the file browser
@@ -122,7 +122,7 @@ mxp.widgets.GeoBatchRunRoadsProcessing = Ext.extend(Ext.Panel, {
             handler: this.runLocal,
 			scope: this
         }];
-        mxp.widgets.GeoBatchRunRoadsProcessing.superclass.initComponent.call(this, arguments);
+        mxp.widgets.GeoBatchRunMigration.superclass.initComponent.call(this, arguments);
        
     },
     
@@ -175,7 +175,7 @@ mxp.widgets.GeoBatchRunRoadsProcessing = Ext.extend(Ext.Panel, {
         });
 		metadataStore.on('load', function(store, records, options) {
 			if(records.length === 1) {
-				var fileName = records[0].get('nome_file') + '.feature';
+				var fileName = records[0].get('nome_file').substring(0,2) + '_' + records[0].get('nome_file').substring(11,19)+'.run';
 				Ext.Ajax.request({
 				   url: this.geoBatchRestURL + 'flows/' + this.flowId +'/run?fileName=' + fileName, 
 				   method: 'POST',
@@ -231,4 +231,4 @@ mxp.widgets.GeoBatchRunRoadsProcessing = Ext.extend(Ext.Panel, {
     }
     
 });
-Ext.reg(mxp.widgets.GeoBatchRunRoadsProcessing.prototype.xtype, mxp.widgets.GeoBatchRunRoadsProcessing);
+Ext.reg(mxp.widgets.GeoBatchRunMigration.prototype.xtype, mxp.widgets.GeoBatchRunMigration);
