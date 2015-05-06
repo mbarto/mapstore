@@ -59,9 +59,12 @@ mxp.plugins.Login = Ext.extend(mxp.plugins.Tool, {
             // grid: this,
             forceLogin: this.forceLogin,
             geoStoreBase : this.target.config.geoStoreBase,
+            adminUrl : this.target.config.adminUrl,
             token: this.target.auth,
             statelessSession: this.statelessSession,
-            defaultHeaders: this.target.defaultHeaders
+            defaultHeaders: this.target.defaultHeaders,
+            authenticationMethod: this.target.authenticationMethod || 'basic',
+            sessionLogin: this.target.sessionLogin || false
         });
 
         // Add listeners for login and logout

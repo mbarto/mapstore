@@ -128,6 +128,13 @@ MSMLogin = Ext.extend(Ext.FormPanel, {
      * 
      */
     forceLogin: false,
+    
+    /**
+     * Property: sessionLogin
+     * {Boolean} If true, uses the session service to login, if false uses geostore directly. 
+     * 
+     */
+    sessionLogin: false,
      
     /** private: method[constructor]
      */
@@ -252,7 +259,7 @@ MSMLogin = Ext.extend(Ext.FormPanel, {
 					sessionStorage["userDetails"] = Ext.util.JSON.encode(userDetails);
 					
                     this.showLogout(user.User.name);
-                    this.fireEvent("login", this.username);
+                    this.fireEvent("login", this.username, this.defaultHeaders.Authorization, userDetails);
                 }else{
                     // invalid user state
                     this.showLogin();
@@ -355,6 +362,19 @@ MSMLogin = Ext.extend(Ext.FormPanel, {
 		return (this.username===undefined ||  this.username === null );
 	},
 		
+    getAuthToken: function(user) {
+        if(user && user.attribute) {
+            var attributes = (user.attribute instanceof Array) ? user.attribute : [user.attribute];
+            for(var i=0, l = attributes.length; i < l; i++) {
+                var attribute = attributes[i];
+                if(attribute.name === 'UUID') {
+                    return 'Bearer ' + attribute.value;
+                }
+            }
+        }
+        return null;
+    },
+    
     /** 
      * api: method[submitLogin]
      * Submits the login.
@@ -367,31 +387,76 @@ MSMLogin = Ext.extend(Ext.FormPanel, {
         var user = fields.loginUsername;
         var auth= 'Basic ' + Base64.encode(user+':'+pass);
         mask.show();
+        
+        var url, method;
+        if(this.sessionLogin) {
+            url = this.adminUrl + 'mvc/session/';
+            method = 'PUT';
+        } else {
+            url = this.geoStoreBase + 'users/user/details?includeattributes=true';
+            method = 'GET';
+        }
+        
+        var geostoreSuccessfulLogin = function(response, form, action) {  
+            mask.hide();
+            this.win.hide();
+            this.getForm().reset();
+            
+            var user = Ext.util.JSON.decode(response.responseText);
+            
+            this.showLogout(user.User.name);
+            // save auth info
+            this.token = auth;
+            
+            if (user.User) {
+                this.userid = user.User.id;//TODO geostore don't return user id! in details request
+                this.username = user.User.name;
+                this.role = user.User.role;
+                
+                if(this.authenticationMethod === 'token') {
+                    this.token = this.getAuthToken(user.User);
+                }
+            }
+            this.fireEvent("login", this.username, this.token, user.User);
+        };
+        
         Ext.Ajax.request({
-            method: 'GET',
-            url: this.geoStoreBase + 'users/user/details/',
+            method: method,
+            url: url,
             scope: this,
             headers: {
                 'Accept': 'application/json',
                 'Authorization' : auth
             },
-            success: function(response, form, action) {  
-                mask.hide();
+            success: this.sessionLogin ? function(response, form, action) {  
+                mask.hide();            
                 this.win.hide();
+				
                 this.getForm().reset();
-                
-                var user = Ext.util.JSON.decode(response.responseText);
-                
-                this.showLogout(user.User.name);
-				// save auth info
-				this.token = auth;
-				if (user.User) {
-					this.userid = user.User.id;//TODO geostore don't return user id! in details request
-					this.username = user.User.name;
-					this.role = user.User.role;
-				}
-                this.fireEvent("login", this.username, auth, user.User);
-            },
+				
+                var token = response.responseText;
+                if(token) {
+                    this.token = token;
+                    this.defaultHeaders = {
+                        'Accept': 'application/json',
+                        'Authorization': "Bearer " + this.token
+                    };
+                    this.getLoginInformation();
+                } else {
+                    mask.hide();
+                    Ext.MessageBox.show({
+                        title: this.loginErrorTitle,
+                        msg: this.loginErrorText,
+                        buttons: Ext.MessageBox.OK,
+                        animEl: 'mb4',
+                        icon: Ext.MessageBox.WARNING
+                    });
+                    this.form.markInvalid({
+                        "loginUsername": this.loginErrorText,
+                        "loginPassword": this.loginErrorText
+                    });
+                }
+            } : geostoreSuccessfulLogin,
             failure: function(response, form, action) {
                 mask.hide();
                 Ext.MessageBox.show({
@@ -418,6 +483,7 @@ MSMLogin = Ext.extend(Ext.FormPanel, {
         this.loginButton.setText(text);
         this.loginButton.setHandler(handler, scope);
         this.userLabel.setText(userLabel);
+        
     },
 
     /** private: method[showLogin]

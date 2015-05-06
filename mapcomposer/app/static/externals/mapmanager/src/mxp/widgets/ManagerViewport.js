@@ -106,6 +106,9 @@ mxp.widgets.ManagerViewport = Ext.extend(Ext.Viewport, {
         // this.geoSearchUrl = geoStoreBase + 'extjs/search/';
         this.geoSearchUsersUrl = geoStoreBase + 'extjs/search/users';
         this.geoSearchCategoriesUrl = geoStoreBase + 'extjs/search/category';
+        this.authenticationMethod = config.authenticationMethod || 'basic';
+        this.sessionLogin = config.sessionLogin || false;
+        
         //this.items=[];
         var mergedItems = [];
         
@@ -207,9 +210,11 @@ mxp.widgets.ManagerViewport = Ext.extend(Ext.Viewport, {
                     restful: true,
                     method : 'GET',
                     disableCaching: true,
-                    headers:{
+                    headers: this.auth ? {
                         'Accept': 'application/json', 
                         'Authorization' : this.auth
+                    } : {
+                        'Accept': 'application/json'
                     },
                     failure: function (response) {
                         Ext.Msg.show({
@@ -381,8 +386,7 @@ mxp.widgets.ManagerViewport = Ext.extend(Ext.Viewport, {
 
             // Remove headers
             this.defaultHeaders = {
-                'Accept': 'application/json',
-                'Authorization' : ""
+                'Accept': 'application/json'
             };
 
             this.cleanTools();

@@ -1,6 +1,14 @@
 {
    "scaleOverlayMode": "basic",
    "gsSources":{ 
+        "default": {
+			"ptype": "gxp_wmssource",
+			"title": "Default GeoServer",
+			"url": "http://localhost:8080/geoserver/ows",
+			"SRS": "EPSG:900913",
+			"version":"1.1.1",
+            "authParam": "authkey"
+		},
 		"mapquest": {
 			"ptype": "gxp_mapquestsource"
 		}, 
@@ -165,7 +173,19 @@
 			"index": 24,
 			"showOnStartup": false,
 			"fileDocURL": "MapStore-Help.pdf"
-        }, {
+        },{
+			"ptype": "gxp_login_menu",
+			"loginConfig":{
+				"default_login": {
+					"ptype" : "gxp_geostore_login",
+					"actionTarget": "login_menu.menu",
+					"loginText": "MapStore Login",
+					"reloadOnLogin": true
+				}
+			},
+			"actionTarget": "paneltbar",
+			"index": 26
+		}, {
 			"ptype": "gxp_about",
 			"poweredbyURL": "http://www.geo-solutions.it/about/contacts/",
 			"actionTarget": {"target": "panelbbar", "index": 1}

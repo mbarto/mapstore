@@ -1885,7 +1885,7 @@ MSMGridPanel = Ext.extend(Ext.grid.GridPanel, {
                 timeout: this.msmTimeout,
                 listeners:{
                     beforeload: function(proxy,params){
-                        if(grid.login){
+                        if(grid.login && grid.login.getToken()){
                             proxy.conn.headers['Authorization'] = grid.login.getToken();
                         }else if(proxy.conn.headers && proxy.conn.headers['Authorization']){
                             delete proxy.conn.headers['Authorization'];
